@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vườn Hoa Tương Tác</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% 30%, #1a3a5c 0%, #0d2137 50%, #060e1a 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    font-family: 'Playfair Display', Georgia, serif;
+    overflow: hidden;
+  }
+
+  .scene {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ============================================================ */
+  /* 0. CSS MÀN HÌNH CHỜ (ĐỂ BẬT NHẠC) */
+  /* ============================================================ */
+  #start-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background-color: rgba(6, 14, 26, 0.95);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #FFE566;
+    cursor: pointer;
+    transition: opacity 1s ease, visibility 1s;
+    backdrop-filter: blur(5px);
+  }
+
+  #start-overlay h1 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    text-shadow: 0 0 20px rgba(255, 200, 0, 0.5);
+  }
+
+  #start-overlay p {
+    font-size: 1rem;
+    font-style: italic;
+    opacity: 0.8;
+    animation: blinkText 1.5s infinite;
+  }
+
+  @keyframes blinkText {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 0.2; }
+  }
+
+  /* ============================================================ */
+  /* 1. CSS CHO HOA HƯỚNG DƯƠNG */
+  /* ============================================================ */
+  .sunflower-wrapper {
+    position: absolute;
+    bottom: 0;
+    left: var(--left, 50%);
+    transform: translateX(-50%) scale(var(--scale, 1));
+    transform-origin: bottom center;
+    width: 480px;
+    height: 700px;
+  }
+
+  .glow {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,200,0,0.18) 0%, rgba(255,160,0,0.06) 50%, transparent 70%);
+    animation: pulse 4s ease-in-out infinite, bloomGlow 1.5s ease-out forwards;
+    animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 3s); 
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+    50% { transform: translateX(-50%) scale(1.08); opacity: 0.8; }
+  }
+  @keyframes bloomGlow { to { opacity: 1; } }
+
+  svg.flower {
+    width: 100%;
+    height: 100%;
+    overflow: visible; 
+    filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+  }
+
+  .petal { animation: shimmer 3s ease-in-out infinite; }
+  @keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.88; }
+  }
+
+  .clickable-petal {
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.2s ease;
+  }
+  .clickable-petal:hover {
+    filter: brightness(1.3) drop-shadow(0 0 10px #FFC800);
+  }
+
+  .title {
+    position: absolute;
+    bottom: 80px; 
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,220,100,0.85);
+    font-size: 14px;
+    font-style: italic;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    opacity: 0; 
+    animation: fadeInTitle 1.5s ease forwards 4s;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+  }
+
+  @keyframes fadeInTitle { to { opacity: 0.7; } }
+
+  @keyframes drawStem { to { stroke-dashoffset: 0; } }
+  .stem {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: drawStem 2.5s ease-out forwards;
+    animation-delay: var(--delay, 0s);
+  }
+
+  @keyframes leafGrow {
+    from { opacity: 0; transform: scale(0); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .leaf-pair-2 { transform-origin: 230px 490px; animation: leafGrow 0.8s ease-out forwards; animation-delay: calc(var(--delay, 0s) + 1.4s); opacity: 0; }
+  .leaf-pair-3 { transform-origin: 231px 374px; animation: leafGrow 0.8s ease-out forwards; animation-delay: calc(var(--delay, 0s) + 1.8s); opacity: 0; }
+  .calyx-leaves {
+    opacity: 0;
+    animation: leafGrow 0.8s ease-out forwards;
+    animation-delay: calc(var(--delay, 0s) + 2.3s);
+    transform-origin: 240px 248px;
+  }
+
+  @keyframes bloom {
+    from { opacity: 0; transform: scale(0) translateY(30px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .flower-head {
+    transform-origin: 0px 0px; 
+    animation: bloom 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+    animation-delay: calc(var(--delay, 0s) + 2.5s); 
+    opacity: 0;
+  }
+
+
+  /* ============================================================ */
+  /* 2. CSS CHO HOA MÀU HỒNG */
+  /* ============================================================ */
+  .pink-wrapper {
+    position: absolute;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .pink-stem {
+    width: 4px;
+    background: linear-gradient(to top, #166534, #22c55e);
+    border-radius: 2px;
+    height: 0; 
+    animation: growPinkStem 2s ease-in-out forwards;
+    transform-origin: bottom center; 
+  }
+
+  @keyframes growPinkStem {
+    0% { height: 0; }
+    100% { height: var(--stem-height, 150px); }
+  }
+
+  .pink-flower-head {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    opacity: 0;
+    transform: scale(0);
+    animation: bloomPink 1s ease-out forwards;
+  }
+
+  @keyframes bloomPink {
+    0% { opacity: 0; transform: scale(0) translateY(10px); }
+    80% { opacity: 1; transform: scale(1.1) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .pink-petal {
+    position: absolute;
+    width: 14px;
+    height: 24px;
+    background: #ec4899; 
+    border-radius: 50%;
+    top: 0;
+    left: 8px;
+    transform-origin: bottom center;
+    box-shadow: 0 0 10px rgba(236, 72, 153, 0.6); 
+  }
+
+  .pink-petal:nth-child(1) { transform: rotate(0deg); }
+  .pink-petal:nth-child(2) { transform: rotate(72deg); }
+  .pink-petal:nth-child(3) { transform: rotate(144deg); }
+  .pink-petal:nth-child(4) { transform: rotate(216deg); }
+  .pink-petal:nth-child(5) { transform: rotate(288deg); }
+
+  .pink-center {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #fbbf24; 
+    border-radius: 50%;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+  }
+
+  /* ============================================================ */
+  /* 3. CSS CHO HỘP THÔNG ĐIỆP */
+  /* ============================================================ */
+  #message-modal {
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh; 
+    background: rgba(6, 14, 26, 0.8); 
+    z-index: 9999; 
+    justify-content: center; 
+    align-items: center;
+    backdrop-filter: blur(3px);
+  }
+
+  .message-box {
+    background: radial-gradient(ellipse at center, #1a3a5c 0%, #0d2137 100%);
+    padding: 40px; 
+    border-radius: 15px; 
+    color: #FFE566; 
+    text-align: center; 
+    max-width: 80%;
+    width: 400px;
+    border: 2px solid #C97A00;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(255,200,0,0.2);
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .message-box p {
+    margin-bottom: 30px; 
+    font-size: 20px; 
+    line-height: 1.6;
+  }
+
+  .message-box button {
+    padding: 10px 30px; 
+    background: #C97A00; 
+    color: #fff; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    font-family: 'Playfair Display', serif; 
+    font-size: 16px;
+    transition: background 0.3s;
+  }
+
+  .message-box button:hover {
+    background: #FFC800;
+    color: #0d2137;
+    font-weight: bold;
+  }
+
+  /* ============================================================ */
+  /* 4. CSS CHO TRÁI TIM BAY & NỔ BONG BÓNG */
+  /* ============================================================ */
+  .heart-container {
+    position: absolute;
+    bottom: -50px;
+    z-index: 5;
+    animation: floatUp var(--duration) linear forwards;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(0); }
+    80% { transform: translateY(var(--target-y)); }
+    100% { transform: translateY(calc(var(--target-y) - 5vh)); }
+  }
+
+  .heart-shape {
+    position: absolute;
+    top: -7.5px; left: -7.5px;
+    width: 15px;
+    height: 15px;
+    background-color: #ff7675;
+    transform: rotate(-45deg) scale(var(--scale));
+    animation: popShape var(--duration) linear forwards;
+    box-shadow: 0 0 15px rgba(255, 118, 117, 0.6);
+  }
+
+  .heart-shape::before,
+  .heart-shape::after {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    background-color: #ff7675;
+    border-radius: 50%;
+  }
+  .heart-shape::before { top: -7.5px; left: 0; }
+  .heart-shape::after { top: 0; left: 7.5px; }
+
+  @keyframes popShape {
+    0% { opacity: 0; transform: rotate(-45deg) scale(var(--scale)); }
+    10% { opacity: var(--opacity); transform: rotate(-45deg) scale(var(--scale)); }
+    75% { opacity: 1; transform: rotate(-45deg) scale(var(--scale)); } 
+    80% { opacity: 1; transform: rotate(-45deg) scale(calc(var(--scale) * 1.2)); } 
+    85% { opacity: 0; transform: rotate(-45deg) scale(calc(var(--scale) * 2)); } 
+    100% { opacity: 0; transform: rotate(-45deg) scale(calc(var(--scale) * 2)); }
+  }
+
+  .heart-ring {
+    position: absolute;
+    top: 0; left: 0;
+    width: 30px; height: 30px;
+    margin-top: -15px; margin-left: -15px;
+    border: 2px solid #ff7675;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ff7675;
+    animation: popRing var(--duration) linear forwards;
+  }
+
+  @keyframes popRing {
+    0%, 79% { opacity: 0; transform: translateY(-3px) scale(0); } 
+    80% { opacity: 0.8; transform: translateY(-3px) scale(var(--scale)); border-width: 3px; } 
+    85% { opacity: 0; transform: translateY(-3px) scale(calc(var(--scale) * 2.5)); border-width: 1px; } 
+    100% { opacity: 0; transform: translateY(-3px) scale(calc(var(--scale) * 2.5)); }
+  }
+
+</style>
+</head>
+<body>
+
+<audio id="bgMusic" loop>
+  <source src="snaptik.vn_7285943660728896770.mp3" type="audio/mpeg">
+</audio>
+
+<div id="start-overlay">
+  <h1>Khu Vườn Của Bố Nháaaaaaaaa</h1>
+  <p>bấm dô màn hình là nó phát nhạc, bấm cánh hoa có chửi</p>
+</div>
+
+<svg style="width:0;height:0;position:absolute;" aria-hidden="true">
+  <defs>
+    <radialGradient id="petalFill" cx="30%" cy="25%" r="75%">
+      <stop offset="0%" stop-color="#FFE566"/>
+      <stop offset="45%" stop-color="#FFC800"/>
+      <stop offset="100%" stop-color="#C97A00"/>
+    </radialGradient>
+    <radialGradient id="petalFill2" cx="40%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFD740"/>
+      <stop offset="60%" stop-color="#E8A800"/>
+      <stop offset="100%" stop-color="#9E5E00"/>
+    </radialGradient>
+    <radialGradient id="discCenter" cx="38%" cy="32%" r="62%">
+      <stop offset="0%" stop-color="#7A4A22"/>
+      <stop offset="40%" stop-color="#4A2808"/>
+      <stop offset="100%" stop-color="#2A1404"/>
+    </radialGradient>
+    <radialGradient id="discRing" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8B5A28"/>
+      <stop offset="100%" stop-color="#5A3210"/>
+    </radialGradient>
+    <linearGradient id="stemFill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2E6614"/>
+      <stop offset="35%" stop-color="#4A9420"/>
+      <stop offset="70%" stop-color="#5CAF28"/>
+      <stop offset="100%" stop-color="#3A7818"/>
+    </linearGradient>
+    <linearGradient id="leafFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5EBF28"/>
+      <stop offset="100%" stop-color="#2E6E0E"/>
+    </linearGradient>
+    <linearGradient id="leafFill2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4EAF20"/>
+      <stop offset="100%" stop-color="#266008"/>
+    </linearGradient>
+    <filter id="leafShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="2" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="petalGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#FFB800" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="scene" id="garden">
+
+  <div id="message-modal">
+    <div class="message-box">
+      <p id="message-text">Thông điệp sẽ hiện ở đây</p>
+      <button id="close-btn">Đóng</button>
+    </div>
+  </div>
+
+  <div class="sunflower-wrapper" id="main-flower" style="display: none;">
+    <div class="glow"></div>
+    <svg class="flower" viewBox="0 0 480 700" xmlns="http://www.w3.org/2000/svg">
+      <path class="stem" d="M232,750 C230,560 228,490 233,320 C236,270 238,220 240,148" stroke="url(#stemFill)" stroke-width="16" fill="none" stroke-linecap="round"/>
+      <path class="stem" d="M238,750 C237,560 236,490 240,320 C242,270 244,220 246,148" stroke="#6ECF38" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.35"/>
+      <path class="stem" d="M227,750 C225,560 223,490 228,320 C231,270 233,220 235,148" stroke="#1E4A08" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.4"/>
+      <g class="leaf-pair-2">
+        <g filter="url(#leafShadow)">
+          <path d="M230,490 C214,472 188,452 158,442 C134,434 114,440 110,455 C106,472 124,494 152,504 C178,512 208,506 230,490 Z" fill="url(#leafFill)" stroke="#2E6010" stroke-width="1"/>
+          <path d="M230,490 C205,476 178,460 155,452" stroke="#3A7A18" stroke-width="1.2" fill="none" opacity="0.7"/>
+        </g>
+        <g filter="url(#leafShadow)">
+          <path d="M235,478 C252,458 280,438 312,426 C338,416 360,420 364,436 C368,454 350,478 318,490 C290,500 258,496 235,478 Z" fill="url(#leafFill2)" stroke="#2E6010" stroke-width="1"/>
+          <path d="M235,478 C260,462 288,444 316,436" stroke="#3A7A18" stroke-width="1.2" fill="none" opacity="0.7"/>
+        </g>
+      </g>
+      <g class="leaf-pair-3">
+        <g filter="url(#leafShadow)">
+          <path d="M231,374 C216,354 190,330 160,316 C136,304 114,310 110,326 C106,344 126,368 158,382 C186,394 216,390 231,374 Z" fill="url(#leafFill)" stroke="#2E6010" stroke-width="1"/>
+          <path d="M231,374 C206,356 178,336 155,322" stroke="#3A7A18" stroke-width="1.2" fill="none" opacity="0.7"/>
+        </g>
+        <g filter="url(#leafShadow)">
+          <path d="M236,360 C254,338 286,312 320,298 C348,286 372,292 374,310 C376,330 354,356 320,370 C290,382 260,380 236,360 Z" fill="url(#leafFill2)" stroke="#2E6010" stroke-width="1"/>
+          <path d="M236,360 C263,340 294,316 324,304" stroke="#3A7A18" stroke-width="1.2" fill="none" opacity="0.7"/>
+        </g>
+      </g>
+      <g class="calyx-leaves">
+        <path d="M240,248 C230,260 215,268 205,260 C198,254 202,240 215,234 C226,228 238,236 240,248 Z" fill="#3A8018" stroke="#2A6010" stroke-width="0.8"/>
+        <path d="M240,248 C250,260 265,268 275,260 C282,254 278,240 265,234 C254,228 242,236 240,248 Z" fill="#4A9020" stroke="#2A6010" stroke-width="0.8"/>
+        <path d="M240,248 C228,256 220,270 225,278 C230,284 244,282 252,272 C258,264 252,252 240,248 Z" fill="#3E8818" stroke="#2A6010" stroke-width="0.8"/>
+        <path d="M240,248 C252,256 260,270 255,278 C250,284 236,282 228,272 C222,264 228,252 240,248 Z" fill="#4A9820" stroke="#2A6010" stroke-width="0.8"/>
+      </g>
+      <g transform="translate(240,100)">
+        <g class="flower-head" filter="url(#petalGlow)">
+          <g class="petal target-petals">
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(0)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(22.5)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(45)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(67.5)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(90)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(112.5)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(135)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(157.5)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(180)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(202.5)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(225)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(247.5)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(270)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(292.5)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(315)"/>
+            <ellipse cx="0" cy="-148" rx="22" ry="58" fill="url(#petalFill)" transform="rotate(337.5)"/>
+          </g>
+          <g class="petal target-petals">
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(11.25)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(33.75)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(56.25)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(78.75)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(101.25)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(123.75)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(146.25)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(168.75)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(191.25)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(213.75)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(236.25)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(258.75)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(281.25)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(303.75)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(326.25)"/>
+            <ellipse cx="0" cy="-120" rx="17" ry="44" fill="url(#petalFill2)" transform="rotate(348.75)"/>
+          </g>
+          <circle cx="0" cy="0" r="80" fill="url(#discRing)"/>
+          <circle cx="0" cy="0" r="74" fill="url(#discCenter)"/>
+          <circle cx="0" cy="-60" r="4.5" fill="#B87020" opacity="0.9"/>
+          <circle cx="29" cy="-52" r="4.5" fill="#B87020" opacity="0.9"/>
+          <circle cx="52" cy="-31" r="4.5" fill="#B87020" opacity="0.9"/>
+          <circle cx="60" cy="0" r="4.5" fill="#B87020" opacity="0.9"/>
+          <circle cx="-60" cy="0" r="4.5" fill="#B87020" opacity="0.9"/>
+          <circle cx="0" cy="-18" r="3.2" fill="#703808" opacity="0.95"/>
+          <circle cx="0" cy="18" r="3.2" fill="#703808" opacity="0.95"/>
+          <circle cx="0" cy="0" r="8" fill="#4A2406"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+</div>
+
+<script>
+  // Kho thông điệp ngẫu nhiên
+  const messages = [
+    "Bớt chửi tao lạiiii",
+    "Chửi quài bố tự ái đấyyy",
+    "Linh piggggggg",
+    "Hãy cho tao được ngủ sớm mà ko bị block",
+    "Bớt hăm dọa block tao",
+    "Đừng block tiktok, để nó lên chuỗi",
+    "Tao ghi có mấy lời nhắn hà, chắc có cái nó lặp lại á",
+    "Ghi đại chứ đếch biết ghi gì",
+    "CÓ hình xinh gửi tao coiii (hình Linh í :)))"
+  ];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const garden = document.getElementById('garden');
+    const startOverlay = document.getElementById('start-overlay');
+    const bgMusic = document.getElementById('bgMusic');
+
+    // XỬ LÝ CLICK ĐỂ BẬT NHẠC
+    startOverlay.addEventListener('click', () => {
+      // Ẩn màn hình chờ
+      startOverlay.style.opacity = '0';
+      setTimeout(() => {
+        startOverlay.style.visibility = 'hidden';
+      }, 1000);
+
+      // Phát nhạc nền
+      bgMusic.play().catch((error) => {
+        console.log("Trình duyệt vẫn chặn nhạc:", error);
+      });
+    });
+    
+    // --- 1. Tạo 1 bông Hướng Dương to ở giữa ---
+    const mainFlowerTemplate = document.getElementById('main-flower').innerHTML;
+    const bigFlower = document.createElement('div');
+    bigFlower.className = 'sunflower-wrapper';
+    bigFlower.innerHTML = mainFlowerTemplate;
+    bigFlower.style.setProperty('--left', '50%');
+    bigFlower.style.setProperty('--scale', 1);
+    bigFlower.style.setProperty('--delay', '0s');
+    bigFlower.style.zIndex = 100;
+    garden.appendChild(bigFlower);
+
+    // --- XỬ LÝ CLICK CÁNH HOA LỚN ---
+    const modal = document.getElementById('message-modal');
+    const msgText = document.getElementById('message-text');
+    const closeBtn = document.getElementById('close-btn');
+    let activePetal = null;
+
+    const bigPetals = bigFlower.querySelectorAll('.target-petals ellipse');
+    
+    bigPetals.forEach(petal => {
+      petal.classList.add('clickable-petal');
+      
+      petal.addEventListener('click', function(e) {
+        if(activePetal) return; 
+        
+        activePetal = this;
+        const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+        msgText.innerText = randomMsg;
+        modal.style.display = 'flex';
+      });
+    });
+
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      
+      if(activePetal) {
+        let currentTransform = activePetal.getAttribute('transform') || '';
+        currentTransform = currentTransform.replace(/rotate\(([-+]?[0-9]*\.?[0-9]+)\)/g, 'rotate($1deg)');
+        
+        const dropX = (Math.random() - 0.5) * 120; 
+        const dropY = 600 + Math.random() * 50;    
+        const extraRotate = (Math.random() - 0.5) * 90; 
+
+        activePetal.animate([
+          { transform: `translate(0px, 0px) ${currentTransform}` },
+          { transform: `translate(${dropX}px, ${dropY}px) ${currentTransform} rotate(${extraRotate}deg)` }
+        ], {
+          duration: 1500 + Math.random() * 500, 
+          easing: 'cubic-bezier(0.55, 0.085, 0.68, 0.53)', 
+          fill: 'forwards' 
+        });
+
+        activePetal.classList.remove('clickable-petal');
+        activePetal.style.pointerEvents = 'none';
+
+        activePetal = null;
+      }
+    });
+
+    // --- 2. Tạo 10 bông Hướng Dương nhỏ xung quanh ---
+    for (let i = 0; i < 10; i++) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'sunflower-wrapper';
+      wrapper.innerHTML = mainFlowerTemplate;
+
+      const leftPosition = Math.random() * 90 + 5; 
+      const scale = Math.random() * 0.3 + 0.15;
+      const delay = Math.random() * 3 + 0.5;
+      const zIndex = Math.floor(scale * 100);
+
+      wrapper.style.setProperty('--left', `${leftPosition}%`);
+      wrapper.style.setProperty('--scale', scale);
+      wrapper.style.setProperty('--delay', `${delay}s`);
+      wrapper.style.zIndex = zIndex;
+
+      const smallPetals = wrapper.querySelectorAll('.target-petals ellipse');
+      smallPetals.forEach(p => p.classList.remove('clickable-petal'));
+
+      garden.appendChild(wrapper);
+    }
+
+    // --- 3. Tạo 15 bông hoa màu hồng ---
+    for (let i = 0; i < 15; i++) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'pink-wrapper';
+
+      const leftPosition = Math.random() * 96 + 2; 
+      const stemHeight = Math.random() * 120 + 40; 
+      const animDelay = Math.random() * 3 + 1; 
+      const zIndex = Math.floor(Math.random() * 50) + 20; 
+
+      wrapper.style.left = `${leftPosition}%`;
+      wrapper.style.zIndex = zIndex;
+      
+      wrapper.innerHTML = `
+        <div class="pink-flower-head" style="animation-delay: ${animDelay + 1.5}s;">
+            <div class="pink-petal"></div>
+            <div class="pink-petal"></div>
+            <div class="pink-petal"></div>
+            <div class="pink-petal"></div>
+            <div class="pink-petal"></div>
+            <div class="pink-center"></div>
+        </div>
+        <div class="pink-stem" style="--stem-height: ${stemHeight}px; animation-delay: ${animDelay}s;"></div>
+      `;
+      garden.appendChild(wrapper);
+    }
+
+    // --- 4. TẠO TRÁI TIM BAY VÀ PHÁT NỔ BONG BÓNG ---
+    function spawnHeart() {
+      const container = document.createElement('div');
+      container.className = 'heart-container';
+      
+      const size = Math.random() * 0.7 + 0.5;
+      const left = Math.random() * 100;
+      const duration = Math.random() * 2.5 + 3.5; 
+      const opacity = Math.random() * 0.6 + 0.3; 
+      
+      const targetY = -(Math.random() * 20 + 40); 
+      
+      container.style.setProperty('--scale', size);
+      container.style.setProperty('--opacity', opacity);
+      container.style.setProperty('--target-y', `${targetY}vh`);
+      container.style.setProperty('--duration', `${duration}s`);
+      
+      container.style.left = `${left}vw`;
+      
+      container.innerHTML = `
+        <div class="heart-shape"></div>
+        <div class="heart-ring"></div>
+      `;
+      
+      garden.appendChild(container);
+      
+      setTimeout(() => {
+        container.remove();
+      }, duration * 1000);
+    }
+
+    setInterval(spawnHeart, 400);
+
+  });
+</script>
+
+</body>
+</html>

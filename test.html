@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoa Mọc Từ Dưới Lên</title>
+<style>
+    /* Chỉnh nền tối giống trong video */
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #0f172a; 
+        overflow: hidden; /* Ẩn thanh cuộn */
+        display: flex;
+        align-items: flex-end; /* Ép mọi thứ xuống đáy màn hình */
+        height: 100vh;
+    }
+
+    /* Khu vườn chứa hoa */
+    .garden {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Khung chứa 1 bông hoa hoàn chỉnh */
+    .flower-wrapper {
+        position: absolute;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* --- HIỆU ỨNG CÀNH HOA --- */
+    .stem {
+        width: 6px;
+        background: linear-gradient(to top, #166534, #22c55e); /* Màu xanh lá cây */
+        border-radius: 3px;
+        height: 0; /* Ban đầu cao 0 */
+        /* Animation vươn lên: chạy trong 2s */
+        animation: growStem 2s ease-in-out forwards;
+        transform-origin: bottom center; /* Quan trọng: Mọc từ dưới đáy lên */
+    }
+
+    @keyframes growStem {
+        0% { height: 0; }
+        100% { height: var(--stem-height, 150px); }
+    }
+
+    /* --- HIỆU ỨNG HOA NỞ --- */
+    .flower-head {
+        position: relative;
+        width: 50px;
+        height: 50px;
+        opacity: 0;
+        transform: scale(0);
+        /* Animation hoa nở: chạy 1s */
+        animation: bloom 1s ease-out forwards;
+    }
+
+    @keyframes bloom {
+        0% { opacity: 0; transform: scale(0) translateY(10px); }
+        80% { opacity: 1; transform: scale(1.1) translateY(0); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* Các cánh hoa */
+    .petal {
+        position: absolute;
+        width: 20px;
+        height: 35px;
+        background: #ec4899; /* Màu hồng */
+        border-radius: 50%;
+        top: 0;
+        left: 15px;
+        transform-origin: bottom center;
+        box-shadow: 0 0 10px rgba(236, 72, 153, 0.6); /* Đổ bóng phát sáng nhẹ */
+    }
+
+    /* Xoay 5 cánh hoa thành vòng tròn */
+    .petal:nth-child(1) { transform: rotate(0deg); }
+    .petal:nth-child(2) { transform: rotate(72deg); }
+    .petal:nth-child(3) { transform: rotate(144deg); }
+    .petal:nth-child(4) { transform: rotate(216deg); }
+    .petal:nth-child(5) { transform: rotate(288deg); }
+
+    /* Nhụy hoa ở giữa */
+    .center {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        background: #fbbf24; /* Màu vàng */
+        border-radius: 50%;
+        top: 15px;
+        left: 15px;
+        z-index: 2;
+        box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+    }
+</style>
+</head>
+<body>
+
+    <div class="garden" id="garden"></div>
+
+    <script>
+        const garden = document.getElementById('garden');
+        const numberOfFlowers = 15; // Số lượng hoa bạn muốn mọc lên
+
+        // Chạy vòng lặp để tạo ra nhiều bông hoa
+        for (let i = 0; i < numberOfFlowers; i++) {
+            createFlower();
+        }
+
+        function createFlower() {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flower-wrapper';
+
+            // Sinh thông số ngẫu nhiên cho tự nhiên
+            const leftPosition = Math.random() * 90 + 5; // Vị trí ngang: từ 5% đến 95% màn hình
+            const stemHeight = Math.random() * 150 + 100; // Chiều cao cành: từ 100px đến 250px
+            const animDelay = Math.random() * 3; // Thời gian chờ để mọc (0 đến 3 giây)
+
+            wrapper.style.left = `${leftPosition}%`;
+            
+            // Render HTML cho từng bông hoa
+            // Chú ý: Phần hoa nở (flower-head) sẽ bị delay lâu hơn thân cây (stem) 1.5s để đợi thân mọc xong
+            wrapper.innerHTML = `
+                <div class="flower-head" style="animation-delay: ${animDelay + 1.5}s;">
+                    <div class="petal"></div>
+                    <div class="petal"></div>
+                    <div class="petal"></div>
+                    <div class="petal"></div>
+                    <div class="petal"></div>
+                    <div class="center"></div>
+                </div>
+                <div class="stem" style="--stem-height: ${stemHeight}px; animation-delay: ${animDelay}s;"></div>
+            `;
+
+            garden.appendChild(wrapper);
+        }
+    </script>
+</body>
+</html>
